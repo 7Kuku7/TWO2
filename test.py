@@ -1,5 +1,5 @@
-# test.py
-# python test.py --run_dir results/Exp_v4/seed_3407/run_20260204_120755
+# test.py 标准化测试
+# python test.py --run_dir /home/abc/wq/TWO1/results/Exp_v6/seed_3407/run_20260205_125210/
 import torch
 from torch.utils.data import DataLoader
 import torchvision.transforms as T
@@ -11,7 +11,7 @@ import argparse
 
 from config import Config
 from datasets.nerf_loader import NerfDataset
-from models.dis_nerf_advanced2 import DisNeRFQA_Advanced
+from models.dis_nerf_advanced4 import DisNeRFQA_Advanced
 from utils import calculate_srcc, calculate_plcc, calculate_krcc
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
@@ -78,7 +78,7 @@ def test():
         return
 
     print(f"[Test] Loading weights from: {ckpt_path}")
-    checkpoint = torch.load(ckpt_path)
+    checkpoint = torch.load(ckpt_path, map_location=device)
     model.load_state_dict(checkpoint['state_dict'])
     model.eval()
 

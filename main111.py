@@ -11,7 +11,7 @@ import shutil
 import torchvision.transforms as T
 
 # ================= 导入模块 =================
-from config import Config
+from config111 import Config
 from core.solver3 import Solver
 from datasets.nerf_loader import NerfDataset
 from datasets.ssl_transforms import SelfSupervisedAugmentor 
@@ -47,8 +47,8 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     # [新增 2] 备份配置文件
-    src_config = "config.py"  # 源文件路径
-    dst_config = os.path.join(output_dir, "config.py")  # 目标路径
+    src_config = "config111.py"  # 源文件路径
+    dst_config = os.path.join(output_dir, "config111.py")  # 目标路径
     if os.path.exists(src_config):
         shutil.copy(src_config, dst_config)
         print(f" -> Config copied to: {dst_config}")

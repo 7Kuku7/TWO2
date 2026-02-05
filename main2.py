@@ -1,4 +1,4 @@
-#消融实验 接受结构化参数
+#消融实验 接受结构化参数 命令行参数版。
 import torch
 from torch.utils.data import DataLoader
 import numpy as np

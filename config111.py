@@ -16,7 +16,7 @@ class Config:
 
     # ================= 训练超参数 =================
     SEED = 3407             # 随机种子，设置为 None 则随机
-    GPU_ID = "0"          # 指定 GPU
+    GPU_ID = "1"          # 指定 GPU
     BATCH_SIZE = 4
     NUM_WORKERS = 4
     EPOCHS = 50

@@ -85,7 +85,7 @@ tr_metrics = {
 # -------------------------
 # 样本级划分函数（7:2:1）
 # -------------------------
-def build_simple_split(renders_root="renders", train_ratio=0.7, val_ratio=0.2, seed=42):
+def build_simple_split(renders_root="renders", train_ratio=0.7, val_ratio=0.1, seed=42):
     """
     构建简单的样本级划分
     

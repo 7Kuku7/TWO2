@@ -1,4 +1,6 @@
-# test_ablation3.py 2026.2.4改修改了模块
+# test_ablation3.py 2026.2.4改修改了模块 （推荐）直接路径测试。
+# 关键区别：它是最新的（注释写着 2026.2.4）。它不再依赖复杂的目录结构假设，而是直接让你传入 --model_path xxx.pth，使用起来最方便。
+
 # python test_ablation3.py --model_path results/Exp_v4/seed_3407/run_20260204_111027/best_model.pth
 # python test_ablation3.py --model_path results/ka1/Ablation_wo_SSL/best_model.pth
 # python test_ablation3.py --model_path results/ka1/Ablation_wo_MultiTask/best_model.pth --no_multitask

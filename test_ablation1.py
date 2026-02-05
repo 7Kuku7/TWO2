@@ -1,4 +1,4 @@
-# test_ablation1.py
+# test_ablation1.py test_ablation.py: 结构化测试。因为模型结构（Fusion, Decoupling 等）可以通过开关关闭，加载权重时必须让代码知道模型结构长什么样。这个脚本允许你传入 --no_fusion 等参数，防止权重加载报错（State Dict Mismatch）。
 # python test_ablation1.py --run_dir results/Struct_Full_Model
 # python test_ablation1.py --run_dir results/Struct_wo_Fusion --no_fusion
 # python test_ablation1.py --run_dir results/Struct_wo_MultiTask --no_multitask
