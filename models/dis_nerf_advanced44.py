@@ -1,14 +1,12 @@
-# 带不确定性加权的版本。
-# 关键区别：引入了 MultiTaskLoss 类（参考了 Kendall et al. CVPR 2018），可以通过学习参数 log_vars 自动调整不同 Loss 的权重。子分数头输入也是 feat_d。
-
+# 回归版本。
+# 它也有 MultiTaskLoss。
+# 关键区别：子分数头的输入改回了 融合特征 (feat_fused)（类似基础版）。这可能是发现融合特征效果更好后的回调。
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-# from .backbone import get_content_encoder, get_distortion_encoder
+from .backbone import get_content_encoder, get_distortion_encoder
 from .mi_estimator import MIEstimator
-from .backbone import get_content_encoder
-from .distortion_cnn import DistortionCNN # 导入新模块
 
 class AdaptiveFeatureFusion(nn.Module):
     """
@@ -52,8 +50,8 @@ class DisNeRFQA_Advanced(nn.Module):
         
         # 1. Backbones
         self.content_encoder = get_content_encoder(pretrained=True)
-        # self.distortion_encoder = get_distortion_encoder(pretrained=True)
-        self.distortion_encoder = DistortionCNN(in_chans=3, feature_dim=768, base_dim=64)
+        self.distortion_encoder = get_distortion_encoder(pretrained=True)
+        
         # Feature dimensions
         self.feat_dim = 768 # ViT-Base and Swin-Tiny (projected)
         
@@ -81,11 +79,19 @@ class DisNeRFQA_Advanced(nn.Module):
         # Auxiliary Sub-score Regressor (Multi-task Innovation)
         # Predicts: [Discomfort, Blur, Lighting, Artifacts] (normalized 0-1)
         self.num_subscores = num_subscores
+        # self.subscore_head = nn.Sequential(
+        #     nn.Linear(self.feat_dim, 256), # Uses distortion features
+        #     nn.ReLU(),
+        #     nn.Linear(256, num_subscores),
+        #     nn.Sigmoid() # Assuming subscores are also normalized to 0-1
+        # )
+        
         self.subscore_head = nn.Sequential(
-            nn.Linear(self.feat_dim, 256), # Uses distortion features
+            # 输入改为 Fusion 后的维度 (768 * 2)
+            nn.Linear(self.feat_dim * 2, 256), 
             nn.ReLU(),
             nn.Linear(256, num_subscores),
-            nn.Sigmoid() # Assuming subscores are also normalized to 0-1
+            nn.Sigmoid()
         )
         
         # Contrastive Projectors
@@ -116,9 +122,8 @@ class DisNeRFQA_Advanced(nn.Module):
              feat_c_seq = feat_c_raw[:, 0]
              
         # Distortion Branch
-        # feat_d_raw = self.distortion_encoder.forward_features(x_d_flat)
-        # feat_d_seq = feat_d_raw.mean(dim=[1, 2])
-        feat_d_seq = self.distortion_encoder(x_d_flat)
+        feat_d_raw = self.distortion_encoder.forward_features(x_d_flat)
+        feat_d_seq = feat_d_raw.mean(dim=[1, 2])
         
         # Reshape back
         feat_c_seq = feat_c_seq.view(b, t, -1)
@@ -129,20 +134,19 @@ class DisNeRFQA_Advanced(nn.Module):
         feat_d = feat_d_seq.mean(dim=1)
         
         # # ==========================================
-        # # [修改这里] 实验: 只用 CNN (去掉 ViT 内容分支)
+        # # [修改这里] 实验 A: 去掉内容分支
         # # ==========================================
-        # # 解释：把 feat_c 全部置为 0，模拟没有 ViT 的情况
-        # # 必须使用 zeros_like 以保持维度一致 (768维)，否则后面的 cat 会报错
+        # # 解释：把 feat_c 全部变成 0，模拟模型“看不见”内容
+        # # 注意：这里必须用 zeros_like，保持维度形状不变，否则后面拼接会报错
         # feat_c = torch.zeros_like(feat_c).to(feat_c.device) 
         # # ==========================================
 
         # ==========================================
-        # [修改这里] 实验: 只用 ViT (去掉 CNN 失真分支)
+        # [修改这里] 实验 B: 去掉失真分支
         # ==========================================
-        # 解释：把 feat_d 全部置为 0，模拟模型“看不见”CNN提取的失真信息
-        # 注意：不要改 feat_c，我们要保留它
-        feat_d = torch.zeros_like(feat_d).to(feat_d.device) 
-        # ==========================================
+        # 解释：把 feat_d 全部变成 0，模拟模型“看不见”失真细节
+        # feat_d = torch.zeros_like(feat_d).to(feat_d.device)
+        # # ==========================================
 
         # --- Adaptive Fusion ---
         if self.use_fusion:
@@ -156,7 +160,8 @@ class DisNeRFQA_Advanced(nn.Module):
         score = self.regressor(feat_fused)
         
         # 2. Sub-scores (Auxiliary)
-        sub_scores = self.subscore_head(feat_d)
+        # sub_scores = self.subscore_head(feat_d)
+        sub_scores = self.subscore_head(feat_fused)
         
         # 3. Projections
         proj_c = self.proj_c(feat_c)
@@ -182,4 +187,5 @@ class MultiTaskLoss(nn.Module):
             # log_vars[i] = log(sigma^2)
             precision = torch.exp(-self.log_vars[i])
             loss_sum += 0.5 * precision * loss + 0.5 * self.log_vars[i]
+
         return loss_sum

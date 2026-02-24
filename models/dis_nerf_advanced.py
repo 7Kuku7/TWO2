@@ -1,4 +1,6 @@
 # models/dis_nerf_advanced.py
+# 基础结构：子分数头（Sub-score Head）的输入是 融合后的特征 (feat_fused)
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

@@ -20,39 +20,36 @@ class AdaptiveFeatureFusion(nn.Module):
         )
         
     def forward(self, feat_c, feat_d):
-        # feat_c, feat_d: [B, D]
         combined = torch.cat([feat_c, feat_d], dim=1)
         weights = self.attn_fc(combined) # [B, 2]
         
         alpha = weights[:, 0].unsqueeze(1) # Weight for content
         beta = weights[:, 1].unsqueeze(1)  # Weight for distortion
         
-        # Weighted fusion
-        # We still concat them, but weighted, or sum them?
-        # Concatenation preserves more info. Let's weight them before concat.
-        # Or better: Fused = alpha * C + beta * D (if dimensions match)
-        # But C and D represent different things.
-        # Let's use the weights to scale the features before concatenation.
-        
-        feat_c_weighted = feat_c * (1 + alpha) # Residual-like scaling
+        feat_c_weighted = feat_c * (1 + alpha) 
         feat_d_weighted = feat_d * (1 + beta)
         
         return torch.cat([feat_c_weighted, feat_d_weighted], dim=1)
 
 class DisNeRFQA_Advanced(nn.Module):
-    def __init__(self, num_subscores=4, use_fusion=True):
+    # [修复] 增加 use_multitask 和 use_decoupling 参数，匹配 main2.py 的调用
+    def __init__(self, num_subscores=4, use_fusion=True, use_multitask=True, use_decoupling=True):
         super().__init__()
         self.use_fusion = use_fusion
+        self.use_multitask = use_multitask
+        self.use_decoupling = use_decoupling
         
         # 1. Backbones
         self.content_encoder = get_content_encoder(pretrained=True)
         self.distortion_encoder = get_distortion_encoder(pretrained=True)
         
         # Feature dimensions
-        self.feat_dim = 768 # ViT-Base and Swin-Tiny (projected)
+        self.feat_dim = 768 
         
-        # 2. MI Estimator
-        self.mi_estimator = MIEstimator(self.feat_dim)
+        # 2. MI Estimator (开关控制)
+        self.mi_estimator = None
+        if self.use_decoupling:
+            self.mi_estimator = MIEstimator(self.feat_dim)
         
         # 3. Adaptive Fusion (Innovation)
         if self.use_fusion:
@@ -60,8 +57,6 @@ class DisNeRFQA_Advanced(nn.Module):
         
         # 4. Heads
         # Main Quality Regressor (0-1)
-        # If fusion, input is 2*D (weighted). If no fusion, input is 2*D (concat).
-        # Dimensions are same, just logic differs.
         self.regressor = nn.Sequential(
             nn.Linear(self.feat_dim * 2, 512),
             nn.ReLU(),
@@ -73,22 +68,18 @@ class DisNeRFQA_Advanced(nn.Module):
         )
         
         # Auxiliary Sub-score Regressor (Multi-task Innovation)
-        # Predicts: [Discomfort, Blur, Lighting, Artifacts] (normalized 0-1)
+        # [修复] 开关控制
         self.num_subscores = num_subscores
-        # self.subscore_head = nn.Sequential(
-        #     nn.Linear(self.feat_dim, 256), # Uses distortion features
-        #     nn.ReLU(),
-        #     nn.Linear(256, num_subscores),
-        #     nn.Sigmoid() # Assuming subscores are also normalized to 0-1
-        # )
-        
-        self.subscore_head = nn.Sequential(
-            # 输入改为 Fusion 后的维度 (768 * 2)
-            nn.Linear(self.feat_dim * 2, 256), 
-            nn.ReLU(),
-            nn.Linear(256, num_subscores),
-            nn.Sigmoid()
-        )
+        self.subscore_head = None
+        if self.use_multitask:
+            self.subscore_head = nn.Sequential(
+                # 注意：这里输入维度依然取决于你是否用了 Fusion 后的特征
+                # Advanced4 版本使用的是 feat_fused (768*2)
+                nn.Linear(self.feat_dim * 2, 256), 
+                nn.ReLU(),
+                nn.Linear(256, num_subscores),
+                nn.Sigmoid()
+            )
         
         # Contrastive Projectors
         self.proj_c = nn.Sequential(
@@ -103,7 +94,6 @@ class DisNeRFQA_Advanced(nn.Module):
         )
 
     def forward(self, x_content, x_distortion):
-        # x: [B, T, C, H, W]
         b, t, c, h, w = x_content.shape
         
         # --- Feature Extraction ---
@@ -130,7 +120,7 @@ class DisNeRFQA_Advanced(nn.Module):
         feat_d = feat_d_seq.mean(dim=1)
         
         # --- Adaptive Fusion ---
-        if self.use_fusion:
+        if self.use_fusion and hasattr(self, 'fusion'):
             feat_fused = self.fusion(feat_c, feat_d)
         else:
             # Simple Concatenation (Ablation)
@@ -141,8 +131,10 @@ class DisNeRFQA_Advanced(nn.Module):
         score = self.regressor(feat_fused)
         
         # 2. Sub-scores (Auxiliary)
-        # sub_scores = self.subscore_head(feat_d)
-        sub_scores = self.subscore_head(feat_fused)
+        # [修复] 检查 head 是否存在
+        sub_scores = None
+        if self.subscore_head is not None:
+            sub_scores = self.subscore_head(feat_fused)
         
         # 3. Projections
         proj_c = self.proj_c(feat_c)
@@ -151,22 +143,13 @@ class DisNeRFQA_Advanced(nn.Module):
         return score, sub_scores, proj_c, proj_d, feat_c, feat_d
 
 class MultiTaskLoss(nn.Module):
-    # 基于同方差不确定性(Homoscedastic Uncertainty)的自适应多任务Loss权重
-    # Reference: Kendall et al. "Multi-Task Learning Using Uncertainty to Weigh Losses", CVPR 2018.
     def __init__(self, num_tasks=4):
         super(MultiTaskLoss, self).__init__()
-        # log_vars 是可学习的参数 (log(sigma^2))
-        # 初始化为0，即初始权重为 1.0
         self.log_vars = nn.Parameter(torch.zeros(num_tasks))
 
     def forward(self, input_losses):
-        # input_losses: list of losses [L_reg, L_rank, L_mi, L_sub]
-        # 确保输入是列表
         loss_sum = 0
         for i, loss in enumerate(input_losses):
-            # 核心公式: L = (1 / 2*sigma^2) * L_i + log(sigma)
-            # log_vars[i] = log(sigma^2)
             precision = torch.exp(-self.log_vars[i])
             loss_sum += 0.5 * precision * loss + 0.5 * self.log_vars[i]
-
         return loss_sum

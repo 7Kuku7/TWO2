@@ -1,4 +1,6 @@
 # 消融实验修改 布尔开关
+#消融实验专用版：代码里加了很多 if self.use_fusion: 这样的判断，允许通过参数把某个模块完全变成 None。关键区别：子分数头的输入改为了 仅失真特征 (feat_d)，不再利用内容特征。
+
 import torch
 import torch.nn as nn
 from .backbone import get_content_encoder, get_distortion_encoder
