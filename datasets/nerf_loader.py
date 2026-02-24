@@ -1,4 +1,5 @@
 # datasets/nerf_loader.py
+#拉普拉斯算子 20260204新加模块，对图像进行卷积，提取高频边缘和噪声作为“失真特征”的输入。
 import torch
 from torch.utils.data import Dataset
 from pathlib import Path

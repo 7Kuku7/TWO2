@@ -1,4 +1,5 @@
-# datasets/nerf_loader.py
+# datasets/nerf_loader1.py
+# 使用的是 _grid_mini_patch_sampling（网格小块采样），即将图像切成小块并打乱顺序。这是自监督学习（SSL）中常用的一种手段。
 import torch
 from torch.utils.data import Dataset
 from pathlib import Path
