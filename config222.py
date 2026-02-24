@@ -11,15 +11,15 @@ class Config:
     OUTPUT_DIR = "results"
     
     # ================= 实验名称与描述 =================
-    EXP_NAME = "Exp_v6"  # 实验组名
-    DESCRIPTION = "多任务感知头消融实验"
+    EXP_NAME = "Exp_v7"  # 实验组名
+    DESCRIPTION = "寻找最佳随机种子"
 
     # ================= 训练超参数 =================
-    SEED = 3407             # 随机种子，设置为 None 则随机
+    SEEDS = [3407, 42, 1234, 2026, 777]             # 随机种子，设置为 None 则随机
     GPU_ID = "1"          # 指定 GPU
     BATCH_SIZE = 4
     NUM_WORKERS = 4
-    EPOCHS = 50
+    EPOCHS = 500
     LR = 1e-4             # 学习率
     
     # ================= 损失函数权重 (Ablation Control) =================
@@ -27,7 +27,7 @@ class Config:
     LAMBDA_MSE = 1.0      # 主分数回归损失
     LAMBDA_RANK = 0.1     # 排序损失
     LAMBDA_MI = 0.0       # 解耦损失 (MI Loss) -> 设为0即为 w/o Decoupling
-    LAMBDA_SUB = 0.0      # 子任务分数损失 -> 设为0即为 w/o Multi-task
+    LAMBDA_SUB = 0.05      # 子任务分数损失 -> 设为0即为 w/o Multi-task
     LAMBDA_SSL = 0.2      # 自监督一致性损失 -> 设为0即为 w/o SSL
 
     # ================= 模型配置 =================
@@ -41,9 +41,9 @@ class Config:
     SAVE_PER_VIDEO_RESULT = True # 是否保存每个视频的预测结果JSON
 
     @classmethod
-    def get_output_path(cls):
-        """自动生成当前实验的保存路径"""
-        path = os.path.join(cls.OUTPUT_DIR, cls.EXP_NAME, f"seed_{cls.SEED}")
+    def get_output_path(cls, seed):
+        """自动生成当前实验的保存路径 (根据传入的 seed)"""
+        path = os.path.join(cls.OUTPUT_DIR, cls.EXP_NAME, f"seed_{seed}")
         os.makedirs(path, exist_ok=True)
         return path
 

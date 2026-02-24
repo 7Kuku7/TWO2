@@ -15,7 +15,7 @@ from config import Config
 from core.solver3 import Solver
 from datasets.nerf_loader import NerfDataset
 from datasets.ssl_transforms import SelfSupervisedAugmentor 
-from models.dis_nerf_advanced4 import DisNeRFQA_Advanced
+from models.dis_nerf_advanced44 import DisNeRFQA_Advanced
 
 class MultiScaleCrop:
     def __init__(self, size=224): self.size = size

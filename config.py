@@ -11,15 +11,15 @@ class Config:
     OUTPUT_DIR = "results"
     
     # ================= 实验名称与描述 =================
-    EXP_NAME = "Exp_v6"  # 实验组名
-    DESCRIPTION = "modifiy training with SSL and Decoupling"
+    EXP_NAME = "Exp_v12"  # 实验组名
+    DESCRIPTION = "3204种子"
 
     # ================= 训练超参数 =================
     SEED = 3407             # 随机种子，设置为 None 则随机
-    GPU_ID = "0"          # 指定 GPU
-    BATCH_SIZE = 4
+    GPU_ID = "1"          # 指定 GPU
+    BATCH_SIZE = 2
     NUM_WORKERS = 4
-    EPOCHS = 50
+    EPOCHS = 500
     LR = 1e-4             # 学习率
     
     # ================= 损失函数权重 (Ablation Control) =================
@@ -28,7 +28,7 @@ class Config:
     LAMBDA_RANK = 0.1     # 排序损失
     LAMBDA_MI = 0.0       # 解耦损失 (MI Loss) -> 设为0即为 w/o Decoupling
     LAMBDA_SUB = 0.05      # 子任务分数损失 -> 设为0即为 w/o Multi-task
-    LAMBDA_SSL = 0.2      # 自监督一致性损失 -> 设为0即为 w/o SSL
+    LAMBDA_SSL = 0.1      # 自监督一致性损失 -> 设为0即为 w/o SSL
 
     # ================= 模型配置 =================
     NUM_FRAMES = 16        # 每个视频采样的帧数

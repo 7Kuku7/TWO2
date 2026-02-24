@@ -42,9 +42,6 @@ def parse_args():
     parser.add_argument("--no_multitask", action='store_true', help="Remove Sub-score Head")
     parser.add_argument("--no_decoupling", action='store_true', help="Remove MI Estimator")
     
-    #拉普拉斯
-    parser.add_argument("--no_laplacian", action='store_true', help="Disable Laplacian prior (use RGB)")
-    
     return parser.parse_args()
 
 def main():
@@ -53,11 +50,9 @@ def main():
     
     cfg = Config()
     args = parse_args()
-
-    use_lap = not args.no_laplacian
-
-    cfg.SEED = 3407
     
+    cfg.SEED = 3407
+
     # 应用参数
     cfg.EXP_NAME = args.exp_name
     cfg.GPU_ID = args.gpu
@@ -104,7 +99,7 @@ def main():
         mode='train',
         basic_transform=basic_transform,
         ssl_transform=ssl_augmentor,
-        distortion_sampling=use_lap,
+        distortion_sampling=True,
         num_frames=cfg.NUM_FRAMES, 
         use_subscores=cfg.USE_SUBSCORES
     )
@@ -115,8 +110,7 @@ def main():
         mode='val',
         basic_transform=basic_transform,
         ssl_transform=None,
-        distortion_sampling=use_lap,
-        # distortion_sampling=False,
+        distortion_sampling=False,
         num_frames=cfg.NUM_FRAMES,
         use_subscores=cfg.USE_SUBSCORES
     )
@@ -137,8 +131,8 @@ def main():
     )
 
     solver = Solver(model, cfg, train_loader, val_loader)
-    
-    best_srcc = -1.0 # 恢复为：只记录最佳 SRCC
+
+    best_combined_score = -1.0 # 初始化最佳综合分数 (SRCC + PLCC)
     
     for epoch in range(1, cfg.EPOCHS + 1):
         loss = solver.train_epoch(epoch)
@@ -147,14 +141,14 @@ def main():
         # 提取当前的 SRCC 和 PLCC
         current_srcc = metrics['srcc']
         current_plcc = metrics['plcc']
+        current_score = current_srcc + current_plcc # 计算总和
         
-        # 打印日志依然保留 PLCC，方便你观察，但不再计算总和
-        print(f"Ep {epoch} | Loss: {loss:.4f} | Val SRCC: {current_srcc:.4f} | Val PLCC: {current_plcc:.4f}")
+        print(f"Ep {epoch} | Loss: {loss:.4f} | Val SRCC: {current_srcc:.4f} | Val PLCC: {current_plcc:.4f} | Sum: {current_score:.4f}")
         
-        # 核心修改：只判断 SRCC 是否超越了历史最佳
-        if current_srcc > best_srcc:
-            best_srcc = current_srcc
-            print(f"  >>> [New Best] Val SRCC 提升至 {best_srcc:.4f}，正在保存模型...")
+        # 判断综合分数是否超越了历史最佳
+        if current_score > best_combined_score:
+            best_combined_score = current_score
+            print(f"  >>> [New Best] 综合分数提升至 {best_combined_score:.4f}，正在保存模型...")
             
             # [防报错机制] 将 numpy float32 转换为 python float，否则 json.dump 会报错
             safe_metrics = {k: float(v) for k, v in metrics.items()}
@@ -162,31 +156,6 @@ def main():
             solver.save_model(output_dir, epoch, safe_metrics)
             with open(os.path.join(output_dir, "best_results.json"), "w") as f:
                 json.dump(safe_metrics, f, indent=4)
-                
-    # best_combined_score = -1.0 # 初始化最佳综合分数 (SRCC + PLCC)
-    
-    # for epoch in range(1, cfg.EPOCHS + 1):
-    #     loss = solver.train_epoch(epoch)
-    #     metrics, _, _, _ = solver.evaluate()
-        
-    #     # 提取当前的 SRCC 和 PLCC
-    #     current_srcc = metrics['srcc']
-    #     current_plcc = metrics['plcc']
-    #     current_score = current_srcc + current_plcc # 计算总和
-        
-    #     print(f"Ep {epoch} | Loss: {loss:.4f} | Val SRCC: {current_srcc:.4f} | Val PLCC: {current_plcc:.4f} | Sum: {current_score:.4f}")
-        
-    #     # 判断综合分数是否超越了历史最佳
-    #     if current_score > best_combined_score:
-    #         best_combined_score = current_score
-    #         print(f"  >>> [New Best] 综合分数提升至 {best_combined_score:.4f}，正在保存模型...")
-            
-    #         # [防报错机制] 将 numpy float32 转换为 python float，否则 json.dump 会报错
-    #         safe_metrics = {k: float(v) for k, v in metrics.items()}
-            
-    #         solver.save_model(output_dir, epoch, safe_metrics)
-    #         with open(os.path.join(output_dir, "best_results.json"), "w") as f:
-    #             json.dump(safe_metrics, f, indent=4)
 
 if __name__ == "__main__":
     main()

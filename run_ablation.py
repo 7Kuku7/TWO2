@@ -9,16 +9,18 @@ from torch.utils.data import DataLoader
 import numpy as np
 import random
 import json
-import os
+import 
+import datetime 
 import argparse
+import shutil
 import torchvision.transforms as T
 
 # ================= 导入模块 =================
 from config import Config
-from core.solver import Solver
+from core.solver3 import Solver
 from datasets.nerf_loader import NerfDataset
 from datasets.ssl_transforms import SelfSupervisedAugmentor 
-from models.dis_nerf_advanced import DisNeRFQA_Advanced
+from models.dis_nerf_advanced44 import DisNeRFQA_Advanced
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run Ablation Study")

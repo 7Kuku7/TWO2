@@ -1,5 +1,5 @@
 # test.py 标准化测试
-# python test.py --run_dir /home/abc/wq/TWO1/results/Exp_v6/seed_3407/run_20260205_125210/
+# python test.py --run_dir results/Exp_v9_Ours_Full/
 import torch
 from torch.utils.data import DataLoader
 import torchvision.transforms as T
@@ -11,7 +11,7 @@ import argparse
 
 from config import Config
 from datasets.nerf_loader import NerfDataset
-from models.dis_nerf_advanced4 import DisNeRFQA_Advanced
+from models.dis_nerf_advanced44 import DisNeRFQA_Advanced
 from utils import calculate_srcc, calculate_plcc, calculate_krcc
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
@@ -68,7 +68,7 @@ def test():
     print(f"[Test] Test Set Size: {len(test_set)}")
 
     # 3. 加载模型
-    device = torch.device(f"cuda:{cfg.GPU_ID}")
+    device = torch.device("cuda:0")
     model = DisNeRFQA_Advanced(num_subscores=4, use_fusion=cfg.USE_FUSION).to(device)
     
     # 加载权重

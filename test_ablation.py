@@ -1,5 +1,5 @@
 # test_ablation.py
-# python test_ablation.py --run_dir results/Struct_Full_Model
+# python test_ablation.py --run_dir results/Exp_v9_Ours_Full
 # python test_ablation.py --run_dir results/Struct_wo_Fusion --no_fusion
 # python test_ablation.py --run_dir results/Struct_wo_MultiTask --no_multitask
 
