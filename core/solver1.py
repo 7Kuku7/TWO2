@@ -1,4 +1,5 @@
 # core/solver.py
+# 改进版 增加了详细的日志记录（Loss components），并且在 Rank Loss 的注释中写明了这是“[修复 1] 真正的 Pairwise Rank Loss”。它把 SSL Loss 也改成了一种 Rank Loss。
 import torch
 import torch.nn as nn
 import torch.optim as optim

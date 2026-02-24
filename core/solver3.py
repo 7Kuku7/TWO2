@@ -1,4 +1,5 @@
-# core/solver.py
+# core/solver3.py
+# 包含了一个针对 SSL（自监督）的特殊逻辑：如果 LAMBDA_MSE == 0（即无监督模式），它会强制模型学习“原图得分 > 增强图得分”。
 import torch
 import torch.nn as nn
 import torch.optim as optim
